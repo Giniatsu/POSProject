@@ -28,8 +28,8 @@ SECRET_KEY = 'django-insecure-^k@m63$2qowri6)hm=x+r$jy!u(&#9up4xjvq*(&$m40*d!_k7
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['pos.snry.xyz']
-CSRF_TRUSTED_ORIGINS = ['https://pos.snry.xyz']
+ALLOWED_HOSTS = ['pos.snry.xyz', '127.0.0.1', 'localhost']
+CSRF_TRUSTED_ORIGINS = ['https://pos.snry.xyz', 'http://127.0.0.1:8000', 'http://localhost:8000']
 
 
 # Application definition

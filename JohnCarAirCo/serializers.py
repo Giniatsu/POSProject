@@ -3,6 +3,7 @@ from JohnCarAirCo.models import (
   AirconType,
   ProductUnit,
   CustomerDetails,
+  TechnicianSchedule,
   TechnicianDetails,
   ServiceType,
   SalesOrder,
@@ -14,6 +15,7 @@ from JohnCarAirCo.models import (
 )
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
+from rest_framework.exceptions import ValidationError
 from django.contrib.auth.password_validation import validate_password
 
 class UserSerializer(serializers.ModelSerializer):
@@ -90,7 +92,30 @@ class CustomerDetailsSerializer(serializers.ModelSerializer):
       'customer_address'
     ]
 
+class TechnicianScheduleSerializer(serializers.ModelSerializer):
+
+  technician = serializers.StringRelatedField(many=False)
+  technician_id = serializers.PrimaryKeyRelatedField(
+    queryset=TechnicianDetails.objects.all(),
+    source='technician',
+  )
+
+  class Meta:
+    model = TechnicianSchedule
+    fields = [
+      'id',
+      'technician',
+      'technician_id',
+      'tech_sched_day',
+      'tech_sched_time_start',
+      'tech_sched_time_end',
+      'tech_sched_status'
+    ]
+
 class TechnicianDetailsSerializer(serializers.ModelSerializer):
+
+  tech_scheds = TechnicianScheduleSerializer(many=True, read_only=True)
+
   class Meta:
     model = TechnicianDetails
     fields = [
@@ -98,7 +123,7 @@ class TechnicianDetailsSerializer(serializers.ModelSerializer):
       'tech_name',
       'tech_phone',
       'tech_email',
-      'tech_sched'
+      'tech_scheds'
     ]
 
 class ServiceTypeSerializer(serializers.ModelSerializer):
@@ -145,24 +170,50 @@ class SalesOrderEntrySerializer(serializers.ModelSerializer):
 
   # add price to sales order total price
   def create(self, validated_data):
+    product_unit = validated_data['product']
+    quantity = validated_data['quantity']
+
+    # check if stock is sufficient
+    if product_unit.unit_stock < quantity:
+        raise serializers.ValidationError('Insufficient stock.')
+
+    validated_data['entry_price'] = product_unit.unit_price * quantity
+
+    # update sales order total price
     order = validated_data['order']
-    validated_data['entry_price'] = validated_data['product'].unit_price * validated_data['quantity']
     order.total_price += validated_data['entry_price']
     order.save()
-    
+
+    # decrement stock
+    product_unit.unit_stock -= quantity
+    product_unit.save()
+
     return SalesOrderEntry.objects.create(**validated_data)
 
   def update(self, instance, validated_data):
+    product_unit = validated_data.get('product', instance.product)
+    quantity = validated_data.get('quantity', instance.quantity)
+
+    # check if stock is sufficient
+    if product_unit.unit_stock + instance.quantity < quantity:
+        raise serializers.ValidationError('Insufficient stock.')
+
+    # update sales order total price
     order = validated_data['order']
-    order.total_price -= instance.product.unit_price * instance.quantity
-    
-    validated_data['entry_price'] = validated_data['product'].unit_price * validated_data['quantity']
-    order.total_price += validated_data['entry_price']
+    order.total_price -= instance.entry_price
+    order.total_price += product_unit.unit_price * quantity
     order.save()
 
-    instance.product = validated_data.get('product', instance.product)
-    instance.quantity = validated_data.get('quantity', instance.quantity)
+    # update stock
+    product_unit.unit_stock += instance.quantity
+    product_unit.unit_stock -= quantity
+    product_unit.save()
+
+    instance.product = product_unit
+    instance.quantity = quantity
+    instance.entry_price = product_unit.unit_price * quantity
     instance.save()
+
     return instance
 
 
@@ -281,6 +332,14 @@ class ServiceOrderSerializer(serializers.ModelSerializer):
       'service_date',
       'total_price',
     ]
+  
+  def validate(self, data):
+    service_date = data['service_date']
+    schedules = TechnicianSchedule.objects.filter(tech_sched_day=service_date.weekday() + 1, technician=data['technician'].id, tech_sched_status=True)
+    for schedule in schedules:
+      if schedule.tech_sched_status:
+        return data
+    raise ValidationError("Selected technician is not available on the service date.")
 
 class SalesOrderPaymentSerializer(serializers.ModelSerializer):
   order = serializers.StringRelatedField(many=False)

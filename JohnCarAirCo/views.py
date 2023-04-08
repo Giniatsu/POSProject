@@ -13,6 +13,7 @@ from JohnCarAirCo.models import (
     ServiceOrderEntry,
     SalesOrderPayment,
     ServiceOrderPayment,
+    TechnicianSchedule,
 )
 from JohnCarAirCo.serializers import (
     AirconTypeSerializer,
@@ -21,6 +22,7 @@ from JohnCarAirCo.serializers import (
     GroupSerializer,
     ProductUnitSerializer,
     CustomerDetailsSerializer,
+    TechnicianScheduleSerializer,
     TechnicianDetailsSerializer,
     ServiceTypeSerializer,
     SalesOrderSerializer,
@@ -68,9 +70,15 @@ class ProductUnitViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows groups to be viewed or edited.
     """
-    queryset = ProductUnit.objects.all()
     serializer_class = ProductUnitSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = ProductUnit.objects.all()
+        available_only = self.request.query_params.get('available_only')
+        if available_only:
+            queryset = queryset.filter(unit_stock__gt=0)
+        return queryset
 
     def put(self, request, *args, **kwargs):
         return self.update(request, *args, **kwargs)
@@ -84,6 +92,20 @@ class CustomerDetailsViewSet(viewsets.ModelViewSet):
     """
     queryset = CustomerDetails.objects.all()
     serializer_class = CustomerDetailsSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
+    
+class TechnicianScheduleViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows groups to be viewed or edited.
+    """
+    queryset = TechnicianSchedule.objects.all()
+    serializer_class = TechnicianScheduleSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def put(self, request, *args, **kwargs):
@@ -152,6 +174,11 @@ class SalesOrderEntryViewSet(viewsets.ModelViewSet):
 
         sales_order.total_price -= sales_order_entry.quantity * sales_order_entry.product.unit_price
         sales_order.save()
+
+        # increment product units
+        product = ProductUnit.objects.get(id=sales_order_entry.product.id)
+        product.unit_stock += sales_order_entry.quantity
+        product.save()
 
         sales_order_entry.delete()
 

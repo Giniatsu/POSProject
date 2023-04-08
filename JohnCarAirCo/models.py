@@ -1,4 +1,6 @@
 from django.db import models
+from django.core.validators import MaxValueValidator, MinValueValidator
+
 
 # Create your models here.
 
@@ -12,7 +14,7 @@ class ProductUnit(models.Model):
     unit_name = models.CharField(max_length=255, null=False)
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)
     unit_type = models.ForeignKey(AirconType, on_delete=models.SET_NULL, null=True)
-    unit_stock = models.IntegerField()
+    unit_stock = models.PositiveIntegerField()
 
     def __str__(self):
         return self.unit_name
@@ -26,11 +28,20 @@ class CustomerDetails(models.Model):
     def __str__(self):
         return self.customer_name
 
+class TechnicianSchedule(models.Model):
+    technician = models.ForeignKey('TechnicianDetails', on_delete=models.CASCADE, related_name='tech_scheds')
+    tech_sched_day = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(7)])
+    tech_sched_time_start = models.TimeField()
+    tech_sched_time_end = models.TimeField()
+    tech_sched_status = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.tech_sched_day}"
+
 class TechnicianDetails(models.Model):
     tech_name = models.CharField(max_length=255)
     tech_phone = models.CharField(max_length=12)
     tech_email = models.CharField(max_length=255)
-    tech_sched = models.CharField(max_length=255)
 
     def __str__(self):
         return self.tech_name
@@ -59,6 +70,7 @@ class SalesOrder(models.Model):
     ]
     customer = models.ForeignKey(CustomerDetails, on_delete=models.CASCADE)
     date_ordered = models.DateField(auto_now_add=True)
+    delivery_date = models.DateField(default=None, null=True)
     total_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     status = models.CharField(max_length=255, choices=status_choices, default='Active')

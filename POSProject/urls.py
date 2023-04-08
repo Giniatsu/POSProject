@@ -23,9 +23,10 @@ from rest_framework_simplejwt.views import (
 )
 
 router = routers.DefaultRouter()
-router.register(r'product_units', views.ProductUnitViewSet)
+router.register(r'product_units', views.ProductUnitViewSet, basename='product-unit')
 router.register(r'customer_details', views.CustomerDetailsViewSet)
 router.register(r'technician_details', views.TechnicianDetailsViewSet)
+router.register(r'technician_schedule', views.TechnicianScheduleViewSet)
 router.register(r'services', views.ServiceTypeViewSet)
 router.register(r'sales_orders', views.SalesOrderViewSet)
 router.register(r'sales_order_entries', views.SalesOrderEntryViewSet)

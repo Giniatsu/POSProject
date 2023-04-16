@@ -208,6 +208,7 @@ class SupplyOrderViewSet(viewsets.ModelViewSet):
 
             entry.delete()
 
+        supply_order.delete()
         return Response(request.data, status=200)
 
 class SalesOrderEntryViewSet(viewsets.ModelViewSet):
@@ -262,6 +263,7 @@ class SalesOrderViewSet(viewsets.ModelViewSet):
 
             entry.delete()
 
+        sales_order.delete()
         return Response(request.data, status=200)
 
 class ServiceOrderEntryViewSet(viewsets.ModelViewSet):

@@ -10,6 +10,8 @@ from JohnCarAirCo.models import (
   SalesOrderEntry,
   ServiceOrder,
   ServiceOrderEntry,
+  SupplyOrder,
+  SupplyOrderEntry,
   SalesOrderPayment,
   ServiceOrderPayment,
 )
@@ -139,6 +141,70 @@ class AirconTypeSerializer(serializers.ModelSerializer):
     model = AirconType
     fields = [
       'type_name',
+    ]
+
+class SupplyOrderEntrySerializer(serializers.ModelSerializer):
+  product = serializers.StringRelatedField(many=False)
+  product_id = serializers.PrimaryKeyRelatedField(
+    queryset=ProductUnit.objects.all(),
+    source='product',
+  )
+
+  order = serializers.StringRelatedField(many=False)
+  order_id = serializers.PrimaryKeyRelatedField(
+    queryset=SalesOrder.objects.all(),
+    source='order',
+  )
+
+  entry_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+
+  class Meta:
+    model = SupplyOrderEntry
+    fields = [
+      'id',
+      'product',
+      'product_id',
+      'order',
+      'order_id',
+      'quantity',
+    ]
+
+  # add price to sales order total price
+  def create(self, validated_data):
+    product_unit = validated_data['product']
+    quantity = validated_data['quantity']
+
+    # increment stock
+    product_unit.unit_stock += quantity
+    product_unit.save()
+
+    return SalesOrderEntry.objects.create(**validated_data)
+
+  def update(self, instance, validated_data):
+    product_unit = validated_data.get('product', instance.product)
+    quantity = validated_data.get('quantity', instance.quantity)
+
+    # update stock
+    product_unit.unit_stock -= instance.quantity
+    product_unit.unit_stock += quantity
+    product_unit.save()
+
+    instance.product = product_unit
+    instance.quantity = quantity
+    instance.save()
+
+    return instance
+
+
+class SupplyOrderSerializer(serializers.ModelSerializer):
+  entries = SupplyOrderEntrySerializer(many=True, read_only=True)
+
+  class Meta:
+    model = SupplyOrder
+    fields = [
+      'id',
+      'date_ordered',
+      'entries',
     ]
 
 class SalesOrderEntrySerializer(serializers.ModelSerializer):

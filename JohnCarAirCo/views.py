@@ -11,6 +11,8 @@ from JohnCarAirCo.models import (
     SalesOrderEntry,
     ServiceOrder,
     ServiceOrderEntry,
+    SupplyOrder,
+    SupplyOrderEntry,
     SalesOrderPayment,
     ServiceOrderPayment,
     TechnicianSchedule,
@@ -27,6 +29,8 @@ from JohnCarAirCo.serializers import (
     ServiceTypeSerializer,
     SalesOrderSerializer,
     SalesOrderEntrySerializer,
+    SupplyOrderSerializer,
+    SupplyOrderEntrySerializer,
     ServiceOrderSerializer,
     ServiceOrderEntrySerializer,
     SalesOrderPaymentSerializer,
@@ -75,7 +79,7 @@ class ProductUnitViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = ProductUnit.objects.all()
-        available_only = self.request.query_params.get('available_only')
+        available_only = self.request.query_params.get('available_only') # type: ignore
         if available_only:
             queryset = queryset.filter(unit_stock__gt=0)
         return queryset
@@ -148,6 +152,44 @@ class AirconTypeViewSet(viewsets.ModelViewSet):
     """
     queryset = AirconType.objects.all()
     serializer_class = AirconTypeSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
+
+class SupplyOrderEntryViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows groups to be viewed or edited.
+    """
+    queryset = SupplyOrderEntry.objects.all()
+    serializer_class = SupplyOrderEntrySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        # subtract price to sales order total
+        supply_order_entry = self.get_object()
+
+        # decrement product units
+        product = ProductUnit.objects.get(id=supply_order_entry.product.id)
+        product.unit_stock -= supply_order_entry.quantity
+        product.save()
+
+        supply_order_entry.delete()
+
+        return Response(request.data, status=200)
+
+class SupplyOrderViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows groups to be viewed or edited.
+    """
+    queryset = SupplyOrder.objects.all()
+    serializer_class = SupplyOrderSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def put(self, request, *args, **kwargs):

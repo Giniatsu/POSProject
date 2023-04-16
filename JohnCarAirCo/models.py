@@ -18,6 +18,26 @@ class ProductUnit(models.Model):
 
     def __str__(self):
         return self.unit_name
+    
+class SupplyOrderEntry(models.Model):
+    order = models.ForeignKey('SupplyOrder', on_delete=models.CASCADE, related_name='entries')
+    product = models.ForeignKey(ProductUnit, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField()
+
+    def __str__(self):
+        return f"{self.product} x{self.quantity}"
+
+class SupplyOrder(models.Model):
+    status_choices = [
+        ('Active', 'Active'),
+        ('Finished', 'Finished'),
+        ('Cancelled', 'Cancelled')
+    ]
+    date_ordered = models.DateField(auto_now_add=True)
+    delivery_date = models.DateField(default=None, null=True)
+
+    def __str__(self):
+        return f"Order #{self.id}" # type: ignore
 
 class CustomerDetails(models.Model):
     customer_name = models.CharField(max_length=255)
@@ -76,7 +96,7 @@ class SalesOrder(models.Model):
     status = models.CharField(max_length=255, choices=status_choices, default='Active')
 
     def __str__(self):
-        return f"Order #{self.id} - {self.customer}"
+        return f"Order #{self.id} - {self.customer}" # type: ignore
 
 class ServiceOrderEntry(models.Model):
     order = models.ForeignKey('ServiceOrder', on_delete=models.CASCADE, related_name='entries')
@@ -102,7 +122,7 @@ class ServiceOrder(models.Model):
     status = models.CharField(max_length=255, choices=status_choices, default='Active')
 
     def __str__(self):
-        return f"Order #{self.id} - {self.customer}"
+        return f"Order #{self.id} - {self.customer}" # type: ignore
     
 class SalesOrderPayment(models.Model):
     order = models.ForeignKey(SalesOrder, on_delete=models.CASCADE)
@@ -117,7 +137,7 @@ class SalesOrderPayment(models.Model):
     is_cash = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"Payment for Sales Order #{self.order.id}"
+        return f"Payment for Sales Order #{self.order.id}" # type: ignore
     
 class ServiceOrderPayment(models.Model):
     order = models.ForeignKey(ServiceOrder, on_delete=models.CASCADE)
@@ -132,4 +152,4 @@ class ServiceOrderPayment(models.Model):
     is_cash = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"Payment for Service Order #{self.order.id}"
+        return f"Payment for Service Order #{self.order.id}" # type: ignore

@@ -152,7 +152,7 @@ class SupplyOrderEntrySerializer(serializers.ModelSerializer):
 
   order = serializers.StringRelatedField(many=False)
   order_id = serializers.PrimaryKeyRelatedField(
-    queryset=SalesOrder.objects.all(),
+    queryset=SupplyOrder.objects.all(),
     source='order',
   )
 

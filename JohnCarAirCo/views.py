@@ -195,8 +195,20 @@ class SupplyOrderViewSet(viewsets.ModelViewSet):
     def put(self, request, *args, **kwargs):
         return self.update(request, *args, **kwargs)
 
-    def delete(self, request, *args, **kwargs):
-        return self.destroy(request, *args, **kwargs)
+    def destroy(self, request, *args, **kwargs):
+        # subtract price to sales order total
+        supply_order = self.get_object()
+
+        entries = SupplyOrderEntry.objects.filter(order=supply_order.id)
+        for entry in entries:
+            # decrement product units
+            product = ProductUnit.objects.get(id=entry.product.id)
+            product.unit_stock -= entry.quantity
+            product.save()
+
+            entry.delete()
+
+        return Response(request.data, status=200)
 
 class SalesOrderEntryViewSet(viewsets.ModelViewSet):
     """
@@ -237,8 +249,20 @@ class SalesOrderViewSet(viewsets.ModelViewSet):
     def put(self, request, *args, **kwargs):
         return self.update(request, *args, **kwargs)
 
-    def delete(self, request, *args, **kwargs):
-        return self.destroy(request, *args, **kwargs)
+    def destroy(self, request, *args, **kwargs):
+        # subtract price to sales order total
+        sales_order = self.get_object()
+
+        entries = SalesOrderEntry.objects.filter(order=sales_order.id)
+        for entry in entries:
+            # increment product units
+            product = ProductUnit.objects.get(id=entry.product.id)
+            product.unit_stock += entry.quantity
+            product.save()
+
+            entry.delete()
+
+        return Response(request.data, status=200)
 
 class ServiceOrderEntryViewSet(viewsets.ModelViewSet):
     """

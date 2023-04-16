@@ -176,7 +176,7 @@ class SupplyOrderEntrySerializer(serializers.ModelSerializer):
     product_unit.unit_stock += quantity
     product_unit.save()
 
-    return SalesOrderEntry.objects.create(**validated_data)
+    return SupplyOrderEntry.objects.create(**validated_data)
 
   def update(self, instance, validated_data):
     product_unit = validated_data.get('product', instance.product)

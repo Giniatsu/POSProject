@@ -343,24 +343,33 @@ class ServiceOrderEntrySerializer(serializers.ModelSerializer):
 
   # add price to sales order total price
   def create(self, validated_data):
+    service = validated_data['service']
+    quantity = validated_data['quantity']
+
+    validated_data['entry_price'] = service.service_cost * quantity
+
+    # update service order total price
     order = validated_data['order']
-    
-    validated_data['entry_price'] = validated_data['service'].service_cost * validated_data['quantity']
     order.total_price += validated_data['entry_price']
     order.save()
+
     return ServiceOrderEntry.objects.create(**validated_data)
   
   def update(self, instance, validated_data):
-    order = validated_data['order']
-    order.total_price -= instance.service.service_cost * instance.quantity
+    service = validated_data.get('service', instance.service)
+    quantity = validated_data.get('quantity', instance.quantity)
 
-    validated_data['entry_price'] = validated_data['service'].service_cost * validated_data['quantity']
-    order.total_price += validated_data['entry_price']
+    # update service order total price
+    order = validated_data['order']
+    order.total_price -= instance.entry_price
+    order.total_price += service.service_cost * quantity
     order.save()
 
-    instance.service = validated_data.get('service', instance.service)
-    instance.quantity = validated_data.get('quantity', instance.quantity)
+    instance.service = service
+    instance.quantity = quantity
+    instance.entry_price = service.service_cost * quantity
     instance.save()
+
     return instance
 
 class ServiceOrderSerializer(serializers.ModelSerializer):

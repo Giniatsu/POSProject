@@ -408,7 +408,7 @@ class ServiceOrderSerializer(serializers.ModelSerializer):
   
   def validate(self, data):
     service_date = data['service_date']
-    schedules = TechnicianSchedule.objects.filter(tech_sched_day=service_date.weekday() + 1, technician=data['technician'].id, tech_sched_status=True)
+    schedules = TechnicianSchedule.objects.filter(tech_sched_day=(service_date.weekday() + 1) % 7 + 1, technician=data['technician'].id, tech_sched_status=True)
     for schedule in schedules:
       if schedule.tech_sched_status:
         return data
